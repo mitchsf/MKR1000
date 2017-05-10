@@ -93,36 +93,29 @@ void getCredentials() {
         else if (c != '\r') {
           currentLine += c;
         }
-        if (c == '&' && currentLine.substring(0, 3) == "GET") {
-          Serial.println();
-          Serial.println("testxx");
-          Serial.println(currentLine.substring(0, 3));
+        if (c == ',' && currentLine.substring(0, 3) == "GET") {
           currentLine.replace("%20", "");
 
           for (int fieldIndex = 0; fieldIndex < numFields; fieldIndex++) {
             String fieldName = ALL_FIELDS[fieldIndex];
-            byte startPosition = currentLine.indexOf("?" + fieldName + "=");
+            byte startPosition = currentLine.indexOf("?" + fieldName + "=") + sizeof(fieldName) - 2;
             if (startPosition != -1) {
-              byte endPosition = currentLine.indexOf("&", startPosition + 1);
+              byte endPosition = currentLine.indexOf("&", startPosition);
               String fieldValue = currentLine.substring(startPosition, endPosition);
-    //          fieldMap[fieldIndex](fieldName, currentLine.indexOf("?" + fieldName + "="));
+              Serial.println();
               Serial.println(fieldValue);
+              //          fieldMap[fieldIndex](fieldName, currentLine.indexOf("?" + fieldName + "="));
             }
           }
-       //   if (currentLine.indexOf("?Username=") != -1) netIndex = currentLine.indexOf("?Username=");
-        //    if (currentLine.indexOf("?Password=") != -1)passIndex = currentLine.indexOf("?Password=");
-         //     xnetwork = currentLine.substring(netIndex + 9, passIndex);
-         //     xpassword = currentLine.substring(passIndex + 10, currentLine.indexOf(","));
-
-              client.stop();
-              WiFi.end();
-              readingPassword = false;
-              needCredentials = false;
-              needWiFi = true;
-              Serial.println();
-              Serial.println(xnetwork);
-              Serial.println(xpassword);
-            }
+          client.stop();
+          WiFi.end();
+          readingPassword = false;
+          needCredentials = false;
+          needWiFi = true;
+          Serial.println();
+          Serial.println(xnetwork);
+          Serial.println(xpassword);
+        }
       }
     }
     delay(1);
@@ -160,11 +153,7 @@ void sendHTMLBody() {
   client.print("<br>");
   client.print("<button type=\"button\" onclick=\"SendText()\">Enter</button>");
   client.println("</body>");
-  //*************************
-
-  //***************************
 }
-
 void sendHTMLFooter() {
   client.println("<script>");
   for (int fieldIndex = 0; fieldIndex < numFields; fieldIndex++) {
@@ -180,11 +169,11 @@ void sendHTMLFooter() {
   for (int fieldIndex = 0; fieldIndex < numFields; fieldIndex++) {
     String fieldName = ALL_FIELDS[fieldIndex];
     if (first) client.print("?");
-    else client.print("\"&");
+    else client.print("\"&?");
     first = false;
     client.print(fieldName + "=\"" + "+" + fieldName + ".value" + "+");
   }
-  client.println("\"&end=end\";");
+  client.println("\"&,&end=end\";");
 
   client.println("request.open(\"GET\",\"ajax_inputs\" +  netText + nocache, true);");
   client.println("request.send(null)");
@@ -203,7 +192,6 @@ void getWiFi() {
 
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print("Attempting to connect to SSID: ");
-    Serial.println(xnetwork);
     WiFi.begin(xnetwork, xpassword);
     delay(10000);
   }
