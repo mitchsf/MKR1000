@@ -180,11 +180,11 @@ void sendRequestHeaders() {
 }
 
 void sendHTMLHead() {
-  client.println("<html>");
-  client.println("<head>");
-  client.println("<style type=\"text/css\"> body {font-family: sans-serif; margin:50px; padding:20px; line-height: 250% } </style>");
+  client.println(F("<html>"));
+  client.println(F("<head>"));
+  client.println(F("<style type=\"text/css\"> body {font-family: sans-serif; margin:50px; padding:20px; line-height: 250% } </style>"));
   client.println("<title>" + settings[0].fieldPrompt + "</title>");
-  client.println("</head>");
+  client.println(F("</head>"));
 }
 
 void sendHTMLBody() {
@@ -201,8 +201,8 @@ void sendHTMLBody() {
             if (settings[fieldIndex].fieldPrompts[opt] == "") break;
             client.println("<option value=\"" + String(opt) + "\">" + settings[fieldIndex].fieldPrompts[opt] + "</option>");
           }
-          client.println("</select>");
-          client.print("<br>");
+          client.println(F("</select>"));
+          client.print(F("<br>"));
           break;
         }
       case 1: // radio
@@ -213,7 +213,7 @@ void sendHTMLBody() {
             //      client.print("<input type=\"radio\"" + String("name=\"r1\"")  + "value=\"" + String(opt) + "\">" + settings[fieldIndex].fieldPrompts[opt] + "<br>");
             client.print("<input type=\"radio\"name=\"" + settings[fieldIndex].fieldName + "\""  + "value=\"" + opt + "\"" + "id=\"" + settings[fieldIndex].fieldPrompts[opt] + "\">" + settings[fieldIndex].fieldPrompts[opt] + "<br>");
           }
-          client.print("<br>");
+          client.print(F("<br>"));
           break;
         }
       case 2: // text
@@ -224,9 +224,9 @@ void sendHTMLBody() {
         }
     }
   }
-  client.print("<br>");
-  client.print("<button type=\"button\" onclick=\"SendText()\">Enter</button>");
-  client.println("</body>");
+  client.print(F("<br>"));
+  client.print(F("<button type=\"button\" onclick=\"SendText()\">Enter</button>"));
+  client.println(F("</body>"));
 }
 
 /*  radio button
@@ -266,7 +266,7 @@ void sendHTMLFooter() {
   }
 
   client.println("\"&,&end=end\";");
-  client.println("request.open(\"GET\",\"ajax_inputs\" +  netText + nocache, true);");
+  client.println(F("request.open(\"GET\",\"ajax_inputs\" +  netText + nocache, true);"));
   client.println("request.send(null);");
   for (int fieldIndex = 1; fieldIndex < numberFields; fieldIndex++) { // clear fields
     String fieldName = settings[fieldIndex].fieldName;
