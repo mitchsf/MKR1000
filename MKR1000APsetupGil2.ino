@@ -3,6 +3,28 @@
 
 #define DEBUG
 
+
+/*
+  // declare a static string
+  #ifdef __AVR__
+  #define P(name)   static const unsigned char name[] __attribute__(( section(".progmem." #name) ))
+  #else
+  #define P(name)   static const unsigned char name[]
+  #endif
+
+   store the HTML in program memory using the P macro
+   P(message) =
+     "<html><head><title>Webduino Control Example</title>"
+     "<body>"
+     "<h1>Test the Control!</h1>"
+     "<form action='/led' method='POST'>"
+     "<p><button name='led' value='0'>Turn if Off!</button></p>"
+     "<p><button name='led' value='1'>Turn it On!</button></p>"
+     "</form></body></html>";
+
+   server.printP(message);
+*/
+
 char apssid[] = "ZEV";
 WiFiServer server(80);
 
@@ -23,7 +45,7 @@ struct fields {
 };
 
 const int numberFields = 5;
-fields settings[numberFields];
+fields settings[numberFields + 1];
 
 WiFiClient client;
 
@@ -47,7 +69,7 @@ void setup() {
   settings[1].fieldPrompt = "User ID";
   settings[1].fieldName = "userid";
   settings[1].textDefault = "";
-  settings[1].heading = "Credentials"; // first element is used for title
+  settings[1].heading = "Credentials"; // used for heading
 
 
   settings[2].type = 2;
@@ -64,9 +86,9 @@ void setup() {
   settings[3].fieldPrompts[2] = "Mercedes";
   settings[3].fieldPrompts[3] = "Alfa Romeo";
 
-  settings[4].type = 1;
+  settings[4].type = 0;
   settings[4].fieldPrompt = "Pick One";
-  settings[4].fieldName = "auto";
+  settings[4].fieldName = "car";
   settings[4].textDefault = "";
   settings[4].fieldPrompts[0] = "Tesla";
   settings[4].fieldPrompts[1] = "BMW";
@@ -148,7 +170,6 @@ void getCredentials() {
     Serial.println("client disconnected");
     Serial.println();
 #endif
-
   }
 }
 
@@ -174,8 +195,8 @@ void sendHTMLBody() {
     switch (settings[fieldIndex].type) {
       case 0: // combo
         {
-          client.print(settings[fieldIndex].fieldPrompt + " ");
-          client.println("<select>");
+          client.print(settings[fieldIndex].fieldPrompt + "<br>");
+          client.println("<select id=" + String("\"") + settings[fieldIndex].fieldName + "\">");
           for (int opt = 0; opt < 11; opt++) {
             if (settings[fieldIndex].fieldPrompts[opt] == "") break;
             client.println("<option value=\"" + String(opt) + "\">" + settings[fieldIndex].fieldPrompts[opt] + "</option>");
@@ -186,19 +207,18 @@ void sendHTMLBody() {
         }
       case 1: // radio
         {
-          client.print(settings[fieldIndex].fieldPrompt + " ");
-
+          client.print(settings[fieldIndex].fieldPrompt + "<br>");
           for (int opt = 0; opt < 11; opt++) {
             if (settings[fieldIndex].fieldPrompts[opt] == "") break;
-            client.print("<input type='radio'" + String("name='source'")  + "value='" + String(opt) + "'>" + settings[fieldIndex].fieldPrompts[opt] + "<br>");
+            //      client.print("<input type=\"radio\"" + String("name=\"r1\"")  + "value=\"" + String(opt) + "\">" + settings[fieldIndex].fieldPrompts[opt] + "<br>");
+            client.print("<input type=\"radio\"name=\"" + settings[fieldIndex].fieldName + "\""  + "value=\"" + opt + "\"" + "id=\"" + settings[fieldIndex].fieldPrompts[opt] + "\">" + settings[fieldIndex].fieldPrompts[opt] + "<br>");
           }
           client.print("<br>");
           break;
         }
-
       case 2: // text
         {
-          client.print(settings[fieldIndex].fieldPrompt + " ");
+          client.print(settings[fieldIndex].fieldPrompt + "<br>");
           client.print("<input id=\"" + settings[fieldIndex].fieldName + "\"" + "value=\"" + settings[fieldIndex].textDefault + "\"><br>");
           break;
         }
@@ -261,6 +281,7 @@ void sendHTMLFooter() {
 void getWiFi() {
   if (xnetwork == "" or xpassword == "") {
     Serial.println("Invalid WiFi credentials");
+    Serial.println("STOP!!!!!!!!!!");
     while (true);
   }
 
