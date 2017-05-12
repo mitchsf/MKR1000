@@ -86,7 +86,7 @@ void setup() {
   settings[3].fieldPrompts[2] = "Mercedes";
   settings[3].fieldPrompts[3] = "Alfa Romeo";
 
-  settings[4].type = 0;
+  settings[4].type = 1;
   settings[4].fieldPrompt = "Pick One";
   settings[4].fieldName = "car";
   settings[4].textDefault = "";
@@ -95,6 +95,13 @@ void setup() {
   settings[4].fieldPrompts[2] = "Mercedes";
   settings[4].fieldPrompts[3] = "Alfa Romeo";
 
+/*
+  int numSsid = WiFi.scanNetworks();
+  if (numSsid > 10) numSsid = 10;
+  for (byte x = 0; x < 10; x++) {
+    //   w[x] = WiFi.SSID(x);
+
+  } */
 
 
 
@@ -193,7 +200,7 @@ void sendHTMLBody() {
     String fieldName = settings[fieldIndex].fieldName;
     if (settings[fieldIndex].heading != "") client.println("<h2>" + settings[fieldIndex].heading + "</h2>");
     switch (settings[fieldIndex].type) {
-      case 0: // combo
+      case 0: // dropdown
         {
           client.print(settings[fieldIndex].fieldPrompt + "<br>");
           client.println("<select id=" + String("\"") + settings[fieldIndex].fieldName + "\">");
@@ -211,8 +218,9 @@ void sendHTMLBody() {
           for (int opt = 0; opt < 11; opt++) {
             if (settings[fieldIndex].fieldPrompts[opt] == "") break;
             //      client.print("<input type=\"radio\"" + String("name=\"r1\"")  + "value=\"" + String(opt) + "\">" + settings[fieldIndex].fieldPrompts[opt] + "<br>");
-            client.print("<input type=\"radio\"name=\"" + settings[fieldIndex].fieldName + "\""  + "value=\"" + opt + "\"" + "id=\"" + settings[fieldIndex].fieldPrompts[opt] + "\">" + settings[fieldIndex].fieldPrompts[opt] + "<br>");
+            client.print("<input type=\"radio\"name=\"" + settings[fieldIndex].fieldName + "\""  + "value=\"" + opt + "\"" + "id=\"" + settings[fieldIndex].fieldPrompts[opt] + "\">" + settings[fieldIndex].fieldPrompts[opt] + "</input><br>");
           }
+          client.print("<script>" + settings[fieldIndex].fieldName + "=document.getElementById('" + settings[fieldIndex].fieldName + "').value</script>");
           client.print(F("<br>"));
           break;
         }
@@ -229,52 +237,35 @@ void sendHTMLBody() {
   client.println(F("</body>"));
 }
 
-/*  radio button
-  client.print("Data Source: ");
-  client.print("<br>");
-  client.print("<input type='radio' name=source value='2'> Anemometer<br>");
-  client.print("<input type='radio' name=source value='3'> Weather Underground<br>");
-
-********* combobox
-  <select>
-  <option value="volvo">Volvo</option>
-  <option value="saab">Saab</option>
-  <option value="opel">Opel</option>
-  <option value="audi">Audi</option>
-  </select>
-
-*/
-
 void sendHTMLFooter() {
-  client.println("<script>");
+  client.println(F("<script>"));
   for (int fieldIndex = 1; fieldIndex < numberFields; fieldIndex++) {
     String fieldName = settings[fieldIndex].fieldName;
     client.println("var " + fieldName + " = document.querySelector('#" + fieldName + "');");
   }
-  client.println("function SendText() {");
+  client.println(F("function SendText() {"));
   client.println("var nocache=\"&nocache=\" + Math.random() * 1000000;");
-  client.println("var request = new XMLHttpRequest();");
-  client.print("var netText = \"&txt=");
+  client.println(F("var request = new XMLHttpRequest();"));
+  client.print(F("var netText = \"&txt="));
 
   bool first = true;
   for (int fieldIndex = 1; fieldIndex < numberFields; fieldIndex++) {
     String fieldName = settings[fieldIndex].fieldName;
-    if (first) client.print("?");
-    else client.print("\"&?");
+    if (first) client.print(F("?"));
+    else client.print(F("\"&?"));
     first = false;
     client.print(fieldName + "=\"" + "+" + fieldName + ".value" + "+");
   }
 
-  client.println("\"&,&end=end\";");
+  client.println(F("\"&,&end=end\";"));
   client.println(F("request.open(\"GET\",\"ajax_inputs\" +  netText + nocache, true);"));
-  client.println("request.send(null);");
+  client.println(F("request.send(null);"));
   for (int fieldIndex = 1; fieldIndex < numberFields; fieldIndex++) { // clear fields
     String fieldName = settings[fieldIndex].fieldName;
     client.println(fieldName + ".value" + "='';");
   }
-
-  client.println("}</script>");
-  client.println("</html>");
+  client.println(F("}</script>"));
+  client.println(F("</html>"));
   client.println();
 }
 
