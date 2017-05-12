@@ -37,19 +37,20 @@ struct fields {
   byte type; // 0=combo, 1=radio, 2=text, 3+=custom
   String fieldPrompt;
   String fieldName;
-  String textDefault;
-  int numDefault;
-  int valid; // range as 1-20, or each valid number as 1,4,7,9 etc.
+  String textDefault; // used for text field
+  byte numDefault; // default element for dropdown
   String heading; // displays before field
-  String fieldPrompts[10];
+  String fieldPrompts[11]; // Only 10 alpha prompts are allowed, should be enough. If not specified, valid[] value is prompt. For fieldPrompts[], use valid[] range.
+  byte valid[100]; // if valid[2] = 255, valid[0] and valid[1] are low and high range. otherwise, valid[0]-valid[100] specify individual selections as 1,4,7,12, etc., and set last element to 254
 };
 
-const int numberFields = 5;
-fields settings[numberFields + 1];
+const int numberFields = 7; // add one for zero element
+fields settings[numberFields];
 
 WiFiClient client;
 
 void setup() {
+
 
   Serial.begin(115200);
   while (!Serial) {
@@ -63,47 +64,67 @@ void setup() {
   Serial.println(apssid);
 #endif
 
+// following is for testing ********************************************
+
   settings[0].fieldPrompt = "Weather Station Setup"; // first element is used for title
 
   settings[1].type = 2;
   settings[1].fieldPrompt = "User ID";
   settings[1].fieldName = "userid";
-  settings[1].textDefault = "";
+  settings[1].textDefault = "UserID";
   settings[1].heading = "Credentials"; // used for heading
-
 
   settings[2].type = 2;
   settings[2].fieldPrompt = "Password";
   settings[2].fieldName = "password";
-  settings[2].textDefault = "yes";
+  settings[2].textDefault = "Password";
 
-  settings[3].type = 0;
+  settings[3].type = 0; // text dropdown
   settings[3].fieldPrompt = "Select Auto";
   settings[3].fieldName = "auto";
-  settings[3].textDefault = "";
+  settings[3].numDefault = 2;
+  settings[3].valid[0] = 0;
+  settings[3].valid[1] = 2;
+  settings[3].valid[2] = 255;
   settings[3].fieldPrompts[0] = "Tesla";
   settings[3].fieldPrompts[1] = "BMW";
   settings[3].fieldPrompts[2] = "Mercedes";
   settings[3].fieldPrompts[3] = "Alfa Romeo";
 
-  settings[4].type = 1;
-  settings[4].fieldPrompt = "Pick One";
-  settings[4].fieldName = "car";
-  settings[4].textDefault = "";
-  settings[4].fieldPrompts[0] = "Tesla";
-  settings[4].fieldPrompts[1] = "BMW";
-  settings[4].fieldPrompts[2] = "Mercedes";
-  settings[4].fieldPrompts[3] = "Alfa Romeo";
+  settings[4].type = 0; // specific items
+  settings[4].fieldPrompt = "Specific Items";
+  settings[4].fieldName = "specificItems";
+  settings[4].numDefault = 3;
+  settings[4].valid[0] = 0;
+  settings[4].valid[1] = 2;
+  settings[4].valid[2] = 4;
+  settings[4].valid[3] = 6;
+  settings[4].valid[4] = 8;
+  settings[4].valid[5] = 254;
 
-/*
+
+  settings[5].type = 0; // select SSID
+  settings[5].fieldPrompt = "Network SSID";
+  settings[5].fieldName = "ssid";
+  settings[5].numDefault = 0;
   int numSsid = WiFi.scanNetworks();
-  if (numSsid > 10) numSsid = 10;
-  for (byte x = 0; x < 10; x++) {
-    //   w[x] = WiFi.SSID(x);
+  if (numSsid > 9) numSsid = 9;
+  for (byte x = 0; x < numSsid; x++) {
+    String ss = WiFi.SSID(x);
+    if (ss.length() == 0) settings[5].valid[x] = 254;
+    else settings[5].fieldPrompts[x] = ss;
+  }
+  settings[5].valid[9] = 254; // just in case there are 10
 
-  } */
+  settings[6].type = 0; // range option
+  settings[6].fieldPrompt = "Range";
+  settings[6].fieldName = "range";
+  settings[6].numDefault = 12;
+  settings[6].valid[0] = 0;
+  settings[6].valid[1] = 50;
+  settings[6].valid[2] = 255;
 
-
+//****************************************************************************
 
   if (WiFi.beginAP(apssid) != WL_AP_LISTENING) {
 #ifdef DEBUG
@@ -195,6 +216,13 @@ void sendHTMLHead() {
 }
 
 void sendHTMLBody() {
+  byte xLow;
+  byte xHigh;
+  byte xFlag;
+  String idVal;
+  String xOpt;
+  String sel;
+
   client.println("<body>");
   for (int fieldIndex = 1; fieldIndex < numberFields; fieldIndex++) { // note that 0 is used for title
     String fieldName = settings[fieldIndex].fieldName;
@@ -204,9 +232,33 @@ void sendHTMLBody() {
         {
           client.print(settings[fieldIndex].fieldPrompt + "<br>");
           client.println("<select id=" + String("\"") + settings[fieldIndex].fieldName + "\">");
-          for (int opt = 0; opt < 11; opt++) {
-            if (settings[fieldIndex].fieldPrompts[opt] == "") break;
-            client.println("<option value=\"" + String(opt) + "\">" + settings[fieldIndex].fieldPrompts[opt] + "</option>");
+          if (settings[fieldIndex].valid[2] == 255) { // valid[0] and valid[1] specifiy low and high range
+            xLow = settings[fieldIndex].valid[0];
+            xHigh = settings[fieldIndex].valid[1];
+            xFlag = true;
+          }
+          else // use all valid[] for specific options
+          {
+            xLow = 0;
+            xHigh = 99;
+            xFlag = false;
+          }
+          for (int option = xLow; option <= xHigh; option++) {
+
+            if (xFlag) { // range
+              if (option < 10 && settings[fieldIndex].fieldPrompts[option] != "") xOpt = settings[fieldIndex].fieldPrompts[option]; //only 10 alpha options allowed
+              else xOpt = String(option); // after 10 or null value, use option as prompt
+              idVal = option;
+            }
+            else { // specific options
+              if (option < 10 && settings[fieldIndex].fieldPrompts[option] != "") xOpt = settings[fieldIndex].fieldPrompts[option]; //only 10 alpha options allowed
+              else  xOpt = settings[fieldIndex].valid[option];
+              idVal = xOpt;
+              if (settings[fieldIndex].valid[option] == 254) break; // leave if last option
+            }
+            if (option == settings[fieldIndex].numDefault) sel = "selected"; // set default selection
+            else sel = "";
+            client.println("<option value=\"" + idVal + "\"" + sel + ">" + xOpt + "</option>");
           }
           client.println(F("</select>"));
           client.print(F("<br>"));
