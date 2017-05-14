@@ -3,28 +3,6 @@
 
 #define DEBUG
 
-
-/*
-  // declare a static string
-  #ifdef __AVR__
-  #define P(name)   static const unsigned char name[] __attribute__(( section(".progmem." #name) ))
-  #else
-  #define P(name)   static const unsigned char name[]
-  #endif
-
-   store the HTML in program memory using the P macro
-   P(message) =
-     "<html><head><title>Webduino Control Example</title>"
-     "<body>"
-     "<h1>Test the Control!</h1>"
-     "<form action='/led' method='POST'>"
-     "<p><button name='led' value='0'>Turn if Off!</button></p>"
-     "<p><button name='led' value='1'>Turn it On!</button></p>"
-     "</form></body></html>";
-
-   server.printP(message);
-*/
-
 char apssid[] = "ZEV";
 WiFiServer server(80);
 
@@ -42,9 +20,10 @@ struct fields {
   String heading; // displays before field
   String fieldPrompts[11]; // Only 10 alpha prompts are allowed, should be enough. If not specified, valid[] value is prompt. For fieldPrompts[], use valid[] range.
   byte valid[100]; // if valid[2] = 255, valid[0] and valid[1] are low and high range. otherwise, valid[0]-valid[100] specify individual selections as 1,4,7,12, etc., and set last element to 254
+  bool returnPrompts; // if true, return value is fieldPrompt
 };
 
-const int numberFields = 8; // add one for zero element
+const int numberFields = 12; // add one for zero element
 fields settings[numberFields];
 
 WiFiClient client;
@@ -68,70 +47,103 @@ void setup() {
 
   settings[0].fieldPrompt = "Weather Station Setup"; // first element is used for title
 
-  settings[1].type = 2;
-  settings[1].fieldPrompt = "User ID";
-  settings[1].fieldName = "userid";
-  settings[1].textDefault = "UserID";
-  settings[1].heading = "Credentials"; // used for heading
-
-  settings[2].type = 2;
-  settings[2].fieldPrompt = "Password";
-  settings[2].fieldName = "password";
-  settings[2].textDefault = "Password";
-
-  settings[3].type = 0; // text dropdown
-  settings[3].fieldPrompt = "Select Auto";
-  settings[3].fieldName = "auto";
-  settings[3].numDefault = 2;
-  settings[3].valid[0] = 0;
-  settings[3].valid[1] = 2;
-  settings[3].valid[2] = 255;
-  settings[3].fieldPrompts[0] = "Tesla";
-  settings[3].fieldPrompts[1] = "BMW";
-  settings[3].fieldPrompts[2] = "Mercedes";
-  settings[3].fieldPrompts[3] = "Alfa Romeo";
-
-  settings[4].type = 0; // specific items
-  settings[4].fieldPrompt = "Specific Items";
-  settings[4].fieldName = "specificItems";
-  settings[4].numDefault = 3;
-  settings[4].valid[0] = 0;
-  settings[4].valid[1] = 2;
-  settings[4].valid[2] = 4;
-  settings[4].valid[3] = 6;
-  settings[4].valid[4] = 8;
-  settings[4].valid[5] = 254;
-
-
-  settings[5].type = 0; // dropdown select
-  settings[5].fieldPrompt = "Network SSID";
-  settings[5].fieldName = "ssid";
-  settings[5].numDefault = 0;
+  settings[1].type = 0; // dropdown select
+  settings[1].fieldPrompt = "Network SSID";
+  settings[1].fieldName = "ssid";
+  settings[1].numDefault = 0;
+  settings[1].returnPrompts = true;
   int numSsid = WiFi.scanNetworks();
   if (numSsid > 9) numSsid = 9;
   for (byte x = 0; x < numSsid; x++) {
     String ss = WiFi.SSID(x);
     if (ss.length() == 0) settings[5].valid[x] = 254;
-    else settings[5].fieldPrompts[x] = ss;
+    else settings[1].fieldPrompts[x] = ss;
   }
-  settings[5].valid[9] = 254; // just in case there are 10
+  settings[1].valid[9] = 254; // just in case there are 10
 
-  settings[6].type = 0; // dropdown range
-  settings[6].fieldPrompt = "Range";
-  settings[6].fieldName = "range";
-  settings[6].numDefault = 1;
+  settings[2].type = 2;
+  settings[2].fieldPrompt = "Password";
+  settings[2].fieldName = "password";
+
+  settings[3].type = 2;
+  settings[3].fieldPrompt = "Weather Underground Key";
+  settings[3].fieldName = "wukey";
+
+  settings[4].type = 2;
+  settings[4].fieldPrompt = "Postal Code";
+  settings[4].fieldName = "pcode";
+
+  settings[5].type = 0; // text dropdown
+  settings[5].fieldPrompt = "Primary Wind Display";
+  settings[5].fieldName = "pWind";
+  settings[5].numDefault = 0;
+  settings[5].valid[0] = 0;
+  settings[5].valid[1] = 1;
+  settings[5].valid[2] = 255;
+  settings[5].fieldPrompts[0] = "Anemometer";
+  settings[5].fieldPrompts[1] = "Weather Underground";
+
+  settings[6].type = 0; // text dropdown
+  settings[6].fieldPrompt = "Secondary Wind Display";
+  settings[6].fieldName = "sWind";
+  settings[6].numDefault = 0;
   settings[6].valid[0] = 0;
-  settings[6].valid[1] = 50;
+  settings[6].valid[1] = 2;
   settings[6].valid[2] = 255;
+  settings[6].fieldPrompts[0] = "Weather Underground";
+  settings[6].fieldPrompts[1] = "Anemometer";
+  settings[6].fieldPrompts[2] = "None";
 
+  settings[7].type = 0; // text dropdown
+  settings[7].fieldPrompt = "Inside Temperature Sensor";
+  settings[7].fieldName = "iTempSensor";
+  settings[7].numDefault = 0;
+  settings[7].valid[0] = 0;
+  settings[7].valid[1] = 1;
+  settings[7].valid[2] = 255;
+  settings[7].fieldPrompts[0] = "Original";
+  settings[7].fieldPrompts[1] = "BME280";
 
-  settings[7].type = 1; // radio
-  settings[7].fieldPrompt = "Sports Car";
-  settings[7].fieldName = "sportscar";
-  settings[7].numDefault = 1;
-  settings[7].fieldPrompts[0] = "Lamborghini";
-  settings[7].fieldPrompts[1] = "Ferrari";
-  settings[7].fieldPrompts[2] = "McLaren";
+  settings[8].type = 0; // text dropdown
+  settings[8].fieldPrompt = "Outside Temperature Sensor";
+  settings[8].fieldName = "oTempSensor";
+  settings[8].numDefault = 0;
+  settings[8].valid[0] = 0;
+  settings[8].valid[1] = 1;
+  settings[8].valid[2] = 255;
+  settings[8].fieldPrompts[0] = "Original";
+  settings[8].fieldPrompts[1] = "BME280";
+
+  settings[9].type = 0; // text dropdown
+  settings[9].fieldPrompt = "Inside Humidity Display (BME280 Only)";
+  settings[9].fieldName = "iHumidity";
+  settings[9].numDefault = 0;
+  settings[9].valid[0] = 0;
+  settings[9].valid[1] = 1;
+  settings[9].valid[2] = 255;
+  settings[9].fieldPrompts[0] = "No";
+  settings[9].fieldPrompts[1] = "Yes";
+
+  settings[10].type = 0; // text dropdown
+  settings[10].fieldPrompt = "Outside Humidity Display (BME280 Only)";
+  settings[10].fieldName = "oHumidity";
+  settings[10].numDefault = 0;
+  settings[10].valid[0] = 0;
+  settings[10].valid[1] = 1;
+  settings[10].valid[2] = 255;
+  settings[10].fieldPrompts[0] = "No";
+  settings[10].fieldPrompts[1] = "Yes";
+
+  settings[11].type = 0; // text dropdown
+  settings[11].fieldPrompt = "Set Time from NTP Server (CPU Ugrade Only)";
+  settings[11].fieldName = "iTime";
+  settings[11].numDefault = 0;
+  settings[11].valid[0] = 0;
+  settings[11].valid[1] = 1;
+  settings[11].valid[2] = 255;
+  settings[11].fieldPrompts[0] = "No";
+  settings[11].fieldPrompts[1] = "Yes";
+
 
 
   //****************************************************************************
@@ -264,7 +276,8 @@ void sendHTMLBody() {
             else { // specific options
               if (option < 10 && settings[fieldIndex].fieldPrompts[option] != "") xOpt = settings[fieldIndex].fieldPrompts[option]; //only 10 alpha options allowed
               else  xOpt = settings[fieldIndex].valid[option];
-              idVal = xOpt;
+              if (settings[fieldIndex].returnPrompts == false) idVal = xOpt;
+              else idVal = settings[fieldIndex].fieldPrompts[option]; // return fieldprompt when options vary such as with SSID
               if (settings[fieldIndex].valid[option] == 254) break; // leave if last option
             }
             if (option == settings[fieldIndex].numDefault) sel = "selected"; // set default selection
@@ -308,7 +321,7 @@ void sendHTMLFooter() {
   client.println(F("<script>"));
   for (int fieldIndex = 1; fieldIndex < numberFields; fieldIndex++) { // **************************** apparently this is not necessary because we don't need javascript variables
     String fieldName = settings[fieldIndex].fieldName;
- //   client.println("var " + fieldName + " = document.querySelector('#" + fieldName + "');");
+    //   client.println("var " + fieldName + " = document.querySelector('#" + fieldName + "');");
   }
   client.println(F("function SendText() {"));
   client.println("var nocache=\"&nocache=\" + Math.random() * 1000000;");
