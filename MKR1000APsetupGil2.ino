@@ -267,7 +267,6 @@ void sendHTMLBody() {
             xFlag = false;
           }
           for (int option = xLow; option <= xHigh; option++) {
-
             if (xFlag) { // range
               if (option < 10 && settings[fieldIndex].fieldPrompts[option] != "") xOpt = settings[fieldIndex].fieldPrompts[option]; //only 10 alpha options allowed
               else xOpt = String(option); // after 10 or null value, use option as prompt
@@ -277,7 +276,8 @@ void sendHTMLBody() {
               if (option < 10 && settings[fieldIndex].fieldPrompts[option] != "") xOpt = settings[fieldIndex].fieldPrompts[option]; //only 10 alpha options allowed
               else  xOpt = settings[fieldIndex].valid[option];
               if (settings[fieldIndex].returnPrompts == false) idVal = xOpt;
-              else idVal = settings[fieldIndex].fieldPrompts[option]; // return fieldprompt when options vary such as with SSID
+              else if (settings[fieldIndex].fieldPrompts[option] == "") break;
+                else idVal = settings[fieldIndex].fieldPrompts[option]; // return fieldPrompt when options vary such as with SSID
               if (settings[fieldIndex].valid[option] == 254) break; // leave if last option
             }
             if (option == settings[fieldIndex].numDefault) sel = "selected"; // set default selection
